@@ -7,19 +7,13 @@ int main() {
 
     try {
         Client client(SERVER_ADDRESS, SERVER_PORT);
-        client.connectToServer();
 
-        // Exemple d'envoi/réception TCP
-        client.sendTcpMessage("Hello via TCP");
-        client.receiveTcpMessage();
-
-        // Exemple d'envoi UDP
-        client.sendUdpMessage("Hello via UDP");
-        client.receiveUdpMessage();
+        client.init();
+        client.connectTCP();
+        client.connectUDP();
 
     } catch (const std::exception& e) {
-        std::cerr << "Client error: " << e.what() << std::endl;
-        return 1;
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
     return 0;
