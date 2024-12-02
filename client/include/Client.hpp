@@ -1,25 +1,35 @@
 #ifndef CLIENT_HPP
 #define CLIENT_HPP
 
-#include <string>
 #include <netinet/in.h>
+#include <string>
 
 class Client {
 public:
     Client(const std::string& serverAddress, int serverPort);
     ~Client();
 
-    void connectToServer();
-    void run();
+    void init();
+    void connectTCP();
+    void connectUDP();
+    void disconnectTCP();
+    void disconnectUDP();
 
 private:
-    std::string serverAddress;
-    int serverPort;
-    int clientSocket;
-    sockaddr_in serverAddr;
+    int tcpSocket;
+    int udpSocket;
 
-    void sendMessage(const std::string& message);
-    void receiveMessage();
+    sockaddr_in serverTcpAddr;
+    sockaddr_in serverUdpAddr;
+
+    bool isTcpConnected;
+    bool isUdpInitialized;
+
+    void initTcpSocket();
+    void initUdpSocket();
+    void closeSockets();
+    void handleTcpLoop();
+    void handleUdpLoop();
 };
 
 #endif // CLIENT_HPP

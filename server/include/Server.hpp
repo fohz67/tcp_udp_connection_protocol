@@ -9,15 +9,27 @@ class Server {
 public:
     explicit Server(int port);
     ~Server();
+
     void start();
 
 private:
-    int serverSocket;
+    int tcpSocket;
+    int udpSocket;
     int port;
-    sockaddr_in serverAddr;
+
+    sockaddr_in tcpAddr;
+    sockaddr_in udpAddr;
+
     std::vector<std::thread> clientThreads;
 
-    void handleClient(int clientSocket);
+    void initTcpSocket();
+    void initUdpSocket();
+
+    void handleTcpConnections();
+    void handleTcpClient(int clientSocket);
+    void handleUdpMessages();
+
+    void closeSockets();
 };
 
 #endif // SERVER_HPP

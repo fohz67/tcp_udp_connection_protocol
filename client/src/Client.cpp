@@ -4,56 +4,127 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-Client::Client(const std::string& serverAddress, int serverPort)
-        : serverAddress(serverAddress), serverPort(serverPort), clientSocket(-1) {}
+Client::Client(const std::string &serverAddress, int serverPort)
+        : tcpSocket(-1), udpSocket(-1), isTcpConnected(false), isUdpInitialized(false) {
+    serverTcpAddr.sin_family = AF_INET;
+    serverTcpAddr.sin_port = htons(serverPort);
+    inet_pton(AF_INET, serverAddress.c_str(), &serverTcpAddr.sin_addr);
+
+    serverUdpAddr.sin_family = AF_INET;
+    serverUdpAddr.sin_port = htons(serverPort);
+    inet_pton(AF_INET, serverAddress.c_str(), &serverUdpAddr.sin_addr);
+}
 
 Client::~Client() {
-    if (clientSocket != -1) {
-        close(clientSocket);
-    }
+    closeSockets();
 }
 
-void Client::connectToServer() {
-    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == -1) {
-        throw std::runtime_error("Failed to create socket");
-    }
-
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(serverPort);
-    if (inet_pton(AF_INET, serverAddress.c_str(), &serverAddr.sin_addr) <= 0) {
-        throw std::runtime_error("Invalid server address");
-    }
-
-    if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
-        throw std::runtime_error("Connection to server failed");
-    }
-
-    std::cout << "Connected to server at " << serverAddress << ":" << serverPort << std::endl;
+void Client::init() {
+    initTcpSocket();
+    initUdpSocket();
 }
 
-void Client::run() {
-    std::string message;
-    while (true) {
-        std::cout << "Enter message: ";
-        std::getline(std::cin, message);
-        if (message == "exit") break;
+void Client::initTcpSocket() {
+    tcpSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (tcpSocket == -1) throw std::runtime_error("Failed to create TCP socket");
+}
 
-        sendMessage(message);
-        receiveMessage();
+void Client::initUdpSocket() {
+    udpSocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udpSocket == -1) throw std::runtime_error("Failed to create UDP socket");
+    isUdpInitialized = true;
+}
+
+void Client::connectTCP() {
+    if (connect(tcpSocket, (struct sockaddr *) &serverTcpAddr, sizeof(serverTcpAddr)) < 0)
+        throw std::runtime_error("Failed to connect to TCP server");
+
+    isTcpConnected = true;
+    std::cout << "Connected to TCP server" << std::endl;
+
+    handleTcpLoop();
+}
+
+void Client::connectUDP() {
+    if (!isUdpInitialized) throw std::runtime_error("UDP socket not initialized");
+    std::cout << "Ready to communicate with UDP server" << std::endl;
+
+    handleUdpLoop();
+}
+
+void Client::disconnectTCP() {
+    if (!isTcpConnected) {
+        std::cout << "TCP socket is not connected" << std::endl;
+        return;
     }
+
+    close(tcpSocket);
+    isTcpConnected = false;
+    std::cout << "Disconnected from TCP server" << std::endl;
 }
 
-void Client::sendMessage(const std::string& message) {
-    send(clientSocket, message.c_str(), message.size(), 0);
+void Client::disconnectUDP() {
+    if (!isUdpInitialized) {
+        std::cout << "UDP socket is not initialized" << std::endl;
+        return;
+    }
+
+    close(udpSocket);
+    isUdpInitialized = false;
+    std::cout << "UDP socket closed" << std::endl;
 }
 
-void Client::receiveMessage() {
+void Client::handleTcpLoop() {
     char buffer[1024] = {0};
-    int bytesRead = read(clientSocket, buffer, sizeof(buffer) - 1);
-    if (bytesRead <= 0) {
-        throw std::runtime_error("Server disconnected");
+    std::string message;
+
+    while (isTcpConnected) {
+        std::cout << "Enter TCP message (type 'exit' to disconnect): ";
+        std::getline(std::cin, message);
+
+        if (message == "exit") {
+            disconnectTCP();
+            break;
+        }
+
+        send(tcpSocket, message.c_str(), message.size(), 0);
+
+        int bytesRead = read(tcpSocket, buffer, sizeof(buffer) - 1);
+        if (bytesRead > 0) {
+            buffer[bytesRead] = '\0';
+            std::cout << "TCP Server: " << buffer << std::endl;
+        }
     }
-    buffer[bytesRead] = '\0';
-    std::cout << "Server: " << buffer << std::endl;
+}
+
+void Client::handleUdpLoop() {
+    char buffer[1024] = {0};
+    sockaddr_in fromAddr;
+    socklen_t addrLen = sizeof(fromAddr);
+    std::string message;
+
+    while (isUdpInitialized) {
+        std::cout << "Enter UDP message (type 'exit' to stop): ";
+        std::getline(std::cin, message);
+
+        if (message == "exit") {
+            disconnectUDP();
+            break;
+        }
+
+        sendto(udpSocket, message.c_str(), message.size(), 0,
+               (struct sockaddr *) &serverUdpAddr, sizeof(serverUdpAddr));
+
+        int bytesRead = recvfrom(udpSocket, buffer, sizeof(buffer) - 1, 0,
+                                 (struct sockaddr *) &fromAddr, &addrLen);
+        if (bytesRead > 0) {
+            buffer[bytesRead] = '\0';
+            std::cout << "UDP Server: " << buffer << std::endl;
+        }
+    }
+}
+
+void Client::closeSockets() {
+    if (isTcpConnected) disconnectTCP();
+    if (isUdpInitialized) disconnectUDP();
 }
