@@ -1,35 +1,47 @@
-#ifndef CLIENT_HPP
-#define CLIENT_HPP
+#pragma once
 
-#include <netinet/in.h>
 #include <string>
+#include <netinet/in.h>
+#include "SmartBuffer.hpp"
+#include "Protocol.hpp"
 
 class Client {
 public:
-    Client(const std::string& serverAddress, int serverPort);
+    Client(const std::string &serverAddress, int serverPort);
+
     ~Client();
 
     void init();
+
     void connectTCP();
+
     void connectUDP();
+
     void disconnectTCP();
+
     void disconnectUDP();
+
+    void run();
 
 private:
     int tcpSocket;
     int udpSocket;
-
     sockaddr_in serverTcpAddr;
     sockaddr_in serverUdpAddr;
 
-    bool isTcpConnected;
-    bool isUdpInitialized;
-
     void initTcpSocket();
-    void initUdpSocket();
-    void closeSockets();
-    void handleTcpLoop();
-    void handleUdpLoop();
-};
 
-#endif // CLIENT_HPP
+    void initUdpSocket();
+
+    void sendTcpBuffer(SmartBuffer &buffer);
+
+    void sendUdpBuffer(SmartBuffer &buffer);
+
+    SmartBuffer receiveTcpBuffer();
+
+    SmartBuffer receiveUdpBuffer();
+
+    void handleInput();
+
+    void printResponse(SmartBuffer &buffer);
+};

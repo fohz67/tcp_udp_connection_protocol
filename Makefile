@@ -1,21 +1,30 @@
+# Compiler and flags
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++17 -Iclient/include -Iserver/include
-CLIENT_SRC = client/src/main.cpp client/src/Client.cpp client/src/Protocol.cpp
-SERVER_SRC = server/src/main.cpp server/src/Server.cpp server/src/Protocol.cpp
+
+# Source files and binaries
+CLIENT_SRC = client/src/main.cpp client/src/Client.cpp client/src/SmartBuffer.cpp
 CLIENT_BIN = bin/client
-SERVER_BIN = bin/server
 
-all: $(CLIENT_BIN) $(SERVER_BIN)
+# Default rule
+all: $(CLIENT_BIN)
 
+# Build the client binary
 $(CLIENT_BIN): $(CLIENT_SRC)
 	@mkdir -p bin
 	$(CXX) $(CXXFLAGS) $^ -o $@
+	@echo "Built $(CLIENT_BIN)"
 
-$(SERVER_BIN): $(SERVER_SRC)
-	@mkdir -p bin
-	$(CXX) $(CXXFLAGS) $^ -o $@
-
+# Clean the binary files
 clean:
 	rm -rf bin
+	@echo "Cleaned binary files"
 
-.PHONY: all clean
+# Full clean
+fclean: clean
+	@echo "Fully cleaned project"
+
+# Rebuild the project
+re: fclean all
+
+.PHONY: all clean fclean re

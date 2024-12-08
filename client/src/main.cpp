@@ -11,7 +11,9 @@ int main() {
         client.init();
         client.connectTCP();
         client.connectUDP();
+        client.run();
 
+        return 0;
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
     }
